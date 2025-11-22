@@ -1,0 +1,6 @@
+Flask
+gunicorn
+numpy
+tensorflow==2.12
+Pillow
+gdown
