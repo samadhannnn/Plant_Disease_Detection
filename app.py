@@ -5,6 +5,25 @@ import numpy as np
 import tensorflow as tf
 import gdown
 from flask import Flask, render_template, request, redirect, send_from_directory
+import gc
+
+# ---------------- MEMORY OPTIMIZATION ----------------
+# Configure TensorFlow to use minimal memory
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Reduce TensorFlow logging
+# Disable GPU to save memory (use CPU only)
+tf.config.set_visible_devices([], 'GPU')
+# Set TensorFlow to use minimal memory allocation
+try:
+    # Limit memory growth for GPU (if any)
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+except:
+    pass
+# Set inter/intra op parallelism to reduce memory
+os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 
 # ---------------- CONFIG ----------------
 
@@ -34,13 +53,27 @@ def download_model_if_needed():
 def load_keras_model():
     download_model_if_needed()
     print("📦 Loading model...")
-    model = tf.keras.models.load_model(MODEL_PATH)
+    # Load model with compile=False to save memory
+    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    # Compile only if needed (some models require compilation)
+    try:
+        model.compile()
+    except:
+        pass
     print("✅ Model loaded.")
     return model
 
 
 app = Flask(__name__)
-model = load_keras_model()
+
+# Lazy load model to reduce initial memory footprint
+_model = None
+
+def get_model():
+    global _model
+    if _model is None:
+        _model = load_keras_model()
+    return _model
 
 # ---------------- DISEASE CLASS JSON ----------------
 
@@ -69,9 +102,14 @@ def extract_features(image_path):
 
 
 def model_predict(image_path):
+    model = get_model()  # Get model (lazy loaded)
     img = extract_features(image_path)
-    pred = model.predict(img)
+    # Use predict with smaller batch and verbose=0 to save memory
+    pred = model.predict(img, batch_size=1, verbose=0)
     idx = int(np.argmax(pred))
+    # Clear memory
+    del img, pred
+    gc.collect()
     return plant_disease[idx]
 
 
@@ -84,7 +122,18 @@ def uploadimage():
     save_path = f"{UPLOAD_DIR}/temp_{uuid.uuid4().hex}_{image.filename}"
     image.save(save_path)
 
-    prediction = model_predict(save_path)
+    try:
+        prediction = model_predict(save_path)
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        # Clean up on error
+        if os.path.exists(save_path):
+            os.remove(save_path)
+        return render_template('index.html', error="Prediction failed. Please try again.")
+    finally:
+        # Clean up uploaded file after prediction to save space
+        # Keep it for display, but we could remove it here if needed
+        pass
 
     return render_template(
         'index.html',
