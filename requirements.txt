@@ -1,6 +1,5 @@
 Flask
-gunicorn
 numpy
-tensorflow-cpu==2.12.0
+tensorflow
 Pillow
-gdown
+opencv-python

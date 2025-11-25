@@ -3,191 +3,461 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plant Disease Recognition</title>
+    <title>🌿 PlantAI - Advanced Disease Detection</title>
     <link rel="icon" href="static/images/logo.svg" type="image/svg+xml">
-    <!-- Bootstrap CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    
     <style>
-        .carousel-item{
-            width: 100vw;
-            height: 95vh;
-            color: white;
-            background-image: url('static/images/crop_background1.jpg');
-            background-size: 100% 100%;
-            animation: changeFrame 20s linear infinite;
-        }
-
-        @keyframes changeFrame {
-            0%{
-                background-image: url('static/images/crop_background1.jpg');
-            }
-
-            25%{
-                background-image: url('static/images/crop_background2.jpg');
-            }
-
-            50%{
-                background-image: url('static/images/crop_background3.jpg');
-            }
-
-            75%{
-                background-image: url('static/images/crop_background4.jpg');
-            }
-        }
-
-        .carousel-text-wrapper{
+        /* Additional styles for OpenCV video feed */
+        #opencv-video-feed {
+            display: none;
             width: 100%;
-            height: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.2);
+        }
+
+        .camera-container.active #opencv-video-feed {
+            display: block !important;
+        }
+
+        .camera-container.active .camera-overlay {
+            display: block;
+        }
+
+        .camera-container:not(.active) #opencv-video-feed {
+            display: none !important;
+        }
+
+        .camera-container:not(.active) .camera-overlay {
+            display: none;
+        }
+
+        /* Ensure camera controls are visible when active */
+        .camera-container.active .camera-controls {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .camera-container:not(.active) .camera-controls {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Camera container styles */
+        .camera-container {
+            position: relative;
+            background: rgba(15, 15, 35, 0.8);
+            border-radius: 16px;
+            overflow: hidden;
+            min-height: 400px;
             display: flex;
-            backdrop-filter: blur(2px);
             align-items: center;
-            flex-direction: column;
+            justify-content: center;
         }
 
-        .text-center h1{
-            font-weight: bold;
-            font-size: 72px;
-            text-shadow: 4px 4px 4px #565257;
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            display: none;
         }
 
-        .carousel-text-title{
-            font-weight: bold;
-            font-size: 72px;
-            text-shadow: 4px 4px 4px #565257;
+        .scan-frame {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            right: 10%;
+            bottom: 10%;
+            border: 2px solid rgba(0, 255, 136, 0.5);
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
 
-        .form-box{
-            margin: auto;
+        .scan-line {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            animation: scan 2s ease-in-out infinite;
+        }
+
+        @keyframes scan {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(400px); }
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .camera-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 255, 136, 0.2);
+            backdrop-filter: blur(10px);
+            color: #00ff88;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-btn:hover {
+            background: #00ff88;
+            color: #0a0a1a;
+            transform: scale(1.1);
+        }
+
+        .camera-btn.capture-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 255, 136, 0.3);
+        }
+
+        .camera-btn.close-btn {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        .camera-btn.close-btn:hover {
+            background: #ff4444;
+            color: white;
+        }
+
+        .camera-placeholder {
             text-align: center;
-            display: flex;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
+            padding: 3rem;
         }
 
-        form{
-            margin: auto;
+        .placeholder-content i {
+            font-size: 5rem;
+            color: #00ff88;
+            margin-bottom: 1.5rem;
+            opacity: 0.5;
         }
 
-        .input-box{
-            margin: 15px;
+        .placeholder-content h3 {
+            color: #fff;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
         }
 
-        .result-box{
-            margin: auto;
-            height: 400px;
-            width: 90vw;
-            display: flex;
-            background-color: white;
-            border-radius: 20px;
+        .placeholder-content p {
+            color: #a0a0b0;
+            margin-bottom: 2rem;
         }
 
-        .result-img-container{
-            width: 30%;
-            height: 80%;
-            margin: auto;
-            border-radius: 15px;
+        .start-camera-btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #00ff88, #00d4ff);
+            border: none;
+            border-radius: 50px;
+            color: #0a0a1a;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
         }
 
-        .result-text{
-            width: 60%;
-            margin: auto;
-            height: 80%;
-            border-radius: 15px;
-            background-color: white;
-            color: black;
+        .start-camera-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 255, 136, 0.4);
         }
 
-        .result-image{
-            width: 100%;
-            height: 100%;
-            border-radius: 20px;
+        .start-camera-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        @media (max-width: 768px) {
-            .carousel-text-title{
-                font-size: 48px;
+        .camera-placeholder.hidden {
+            display: none;
+        }
+
+        /* Notification toast styles */
+        .notification-toast {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
             }
-            .result-box{
-                flex-direction: column;
-                height: auto;
-                min-height: 400px;
+            to {
+                transform: translateX(0);
+                opacity: 1;
             }
-            .result-img-container{
-                width: 90%;
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
             }
-            .result-text{
-                width: 90%;
+            to {
+                transform: translateX(100%);
+                opacity: 0;
             }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
-        <div class="container-fluid">
-          <a class="navbar-brand" href="#">
-            <img src="static/images/logo.svg" alt="" width="30" height="24" class="d-inline-block align-text-top">
-            PHASAL
-          </a>
-        </div>
-      </nav>
-      <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-              <div class="carousel-text-wrapper">
-                <h1 class="carousel-text-title">Plant Disease Recognition</h1>
-                <div class="form-box">
-                  <form action="/upload/" method="POST" enctype="multipart/form-data">
-                    <h1>Upload Image</h1>
-                    <div class="input-box d-flex">
-                      <input type="file" accept="image/png, image/jpeg, image/jpg" name="img" required class="form-control">
-                    </div>
-                    <div class="input-box d-flex">
-                      <button type="submit" class="btn btn-success m-auto">Upload</button>
-                    </div>
-                  </form>
-                  {% if result %}
-                  <div class="result-container">
-                    <div class="result-box">
-                      <div class="result-img-container">
-                        <img src="{{imagepath}}" alt="uploaded image" class="result-image">
-                      </div>
-                      <div class="result-text">
-                        <h3>{{prediction['name']}}</h3>
-                        <p>{{prediction['cause']}}</p>
-                        <p>{{prediction['cure']}}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {% endif %}
+    <!-- Animated Background Layers -->
+    <div class="bg-layer layer-1"></div>
+    <div class="bg-layer layer-2"></div>
+    <div class="bg-layer layer-3"></div>
+    
+    <!-- Floating Particles -->
+    <div class="particle-container">
+        <canvas id="particleCanvas"></canvas>
+    </div>
+
+    <!-- Geometric Shapes Animation -->
+    <div class="geometric-shapes">
+        <div class="shape-triangle"></div>
+        <div class="shape-circle"></div>
+        <div class="shape-square"></div>
+        <div class="shape-hexagon"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-wrapper">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="fas fa-seedling"></i>
                 </div>
-              </div>
+                <h1 class="logo-text">
+                    <span class="logo-main">PlantAI</span>
+                    <span class="logo-sub">Disease Detection System</span>
+                </h1>
             </div>
-        </div>
-      </div>
-      <!-- Bootstrap JS CDN -->
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-      <script>
-        // Handle form submission
-        document.querySelector('form').addEventListener('submit', function(e) {
-          const formData = new FormData(this);
-          const fileInput = this.querySelector('input[type="file"]');
-          
-          if (fileInput.files.length === 0) {
-            e.preventDefault();
-            alert('Please select an image file.');
-            return false;
-          }
+            <div class="header-stats">
+                <div class="stat-item">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Powered</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-bolt"></i>
+                    <span>Real-time</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>95%+ Accuracy</span>
+                </div>
+            </div>
+        </header>
 
-          // Show loading state
-          const submitBtn = this.querySelector('button[type="submit"]');
-          const originalText = submitBtn.textContent;
-          submitBtn.textContent = 'Processing...';
-          submitBtn.disabled = true;
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="title-icon"><i class="fas fa-microscope"></i></span>
+                        <span class="title-text">Analyze Plant Health</span>
+                    </h2>
+                    <p class="section-subtitle">Choose your preferred method to capture plant images</p>
+                </div>
 
-          // Note: This requires the Flask backend to be running
-          // For static hosting, you would need to implement client-side ML or use a backend API
-        });
-      </script>
+                <!-- Method Selector -->
+                <div class="method-selector">
+                    <button class="method-btn active" data-method="upload">
+                        <i class="fas fa-upload"></i>
+                        <span>Upload Image</span>
+                    </button>
+                    <button class="method-btn" data-method="camera">
+                        <i class="fas fa-camera"></i>
+                        <span>Use Camera</span>
+                    </button>
+                </div>
+
+                <!-- Upload Method -->
+                <div class="method-content active" id="uploadMethod">
+                    <div class="upload-card">
+                        <form action="/upload/" method="POST" enctype="multipart/form-data" id="uploadForm">
+                            <div class="upload-zone" id="uploadZone">
+                                <div class="upload-icon-wrapper">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <h3>Drag & Drop Your Image</h3>
+                                <p>or click to browse</p>
+                                <input type="file" id="fileInput" name="img" accept="image/*" required>
+                                <div class="file-preview" id="filePreview"></div>
+                            </div>
+                            <button type="submit" class="submit-button" id="uploadSubmit">
+                                <span class="btn-content">
+                                    <i class="fas fa-search"></i>
+                                    <span>Analyze Image</span>
+                                </span>
+                                <span class="btn-loader">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Camera Method -->
+                <div class="method-content" id="cameraMethod">
+                    <div class="camera-card">
+                        <!-- Camera Container -->
+                        <div class="camera-container" id="cameraContainer">
+                            <!-- OpenCV Video Feed (MJPEG stream as img) -->
+                            <img id="opencv-video-feed" alt="Camera Feed">
+                            
+                            <!-- Video element placeholder (hidden, for compatibility) -->
+                            <video id="videoElement" style="display: none;"></video>
+                            <canvas id="canvasElement" style="display: none;"></canvas>
+                            
+                            <!-- Camera Overlay -->
+                            <div class="camera-overlay">
+                                <div class="scan-frame"></div>
+                                <div class="scan-line"></div>
+                            </div>
+                            
+                            <!-- Camera Controls -->
+                            <div class="camera-controls">
+                                <button class="camera-btn capture-btn" id="captureBtn" title="Capture Photo">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                                <button class="camera-btn close-btn" id="closeCameraBtn" title="Stop Camera">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Camera Placeholder (shown when camera is off) -->
+                        <div class="camera-placeholder" id="cameraPlaceholder">
+                            <div class="placeholder-content">
+                                <i class="fas fa-video"></i>
+                                <h3>Camera Ready</h3>
+                                <p>Click the button below to start your camera</p>
+                                <button class="start-camera-btn" id="startCameraBtn">
+                                    <i class="fas fa-play"></i>
+                                    <span>Start Camera</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Camera Preview (optional, shown after capture) -->
+                        <div class="camera-preview" id="cameraPreview" style="display: none;">
+                            <img id="capturedImage" alt="Captured image">
+                            <div class="preview-actions">
+                                <button class="action-btn retake-btn" id="retakeBtn">
+                                    <i class="fas fa-redo"></i> Retake
+                                </button>
+                                <button class="action-btn analyze-btn" id="analyzeCameraBtn">
+                                    <i class="fas fa-search"></i> Analyze
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            {% if result %}
+            <section class="results-section" id="resultsSection">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3 class="result-title">
+                            <i class="fas fa-clipboard-check"></i>
+                            Analysis Results
+                        </h3>
+                        <button class="close-result-btn" onclick="closeResults()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="result-body">
+                        <div class="result-image-section">
+                            <div class="image-wrapper">
+                                <img src="{{imagepath}}" alt="Analyzed plant" class="result-image">
+                                <div class="image-glow"></div>
+                            </div>
+                        </div>
+                        <div class="result-info-section">
+                            <div class="disease-header">
+                                <div class="disease-icon">
+                                    <i class="fas fa-virus"></i>
+                                </div>
+                                <div class="disease-info">
+                                    <span class="disease-label">Detected Disease</span>
+                                    <h4 class="disease-name">{{prediction['name']}}</h4>
+                                </div>
+                            </div>
+                            
+                            <div class="info-cards">
+                                <div class="info-card cause-card">
+                                    <div class="card-header">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <h5>Cause</h5>
+                                    </div>
+                                    <p class="card-content">{{prediction['cause']}}</p>
+                                </div>
+                                
+                                <div class="info-card cure-card">
+                                    <div class="card-header">
+                                        <i class="fas fa-heart-pulse"></i>
+                                        <h5>Treatment</h5>
+                                    </div>
+                                    <p class="card-content">{{prediction['cure']}}</p>
+                                </div>
+                            </div>
+                            
+                            <button class="new-analysis-btn" onclick="analyzeAgain()">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>New Analysis</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if error %}
+            <div class="error-notification">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>{{error}}</p>
+            </div>
+            {% endif %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <p>Made by AIML Students</p>
+            <div class="footer-icons">
+                <i class="fas fa-brain"></i>
+                <i class="fas fa-leaf"></i>
+                <i class="fas fa-microscope"></i>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
 </body>
 </html>
