@@ -9,7 +9,7 @@ import threading
 import time
 
 app = Flask(__name__)
-model = tf.keras.models.load_model("models/plant_disease_recog_model_pwp.keras")
+model = tf.keras.models.load_model("models/model_small.h5")
 
 # OpenCV Camera Setup
 camera = None
@@ -646,3 +646,7 @@ if __name__ == "__main__":
     finally:
         # Ensure camera is released on exit
         release_camera()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=7860)
+
